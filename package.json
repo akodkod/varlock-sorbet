@@ -2,13 +2,35 @@
   "name": "varlock-sorbet",
   "version": "1.0.0",
   "description": "Generate Sorbet structs and enums from Varlock environment schemas",
+  "keywords": [
+    "codegen",
+    "env",
+    "ruby",
+    "sorbet",
+    "varlock"
+  ],
+  "homepage": "https://github.com/akodkod/varlock-sorbet#readme",
+  "bugs": {
+    "url": "https://github.com/akodkod/varlock-sorbet/issues"
+  },
+  "license": "MIT",
+  "author": "Andrew Kodkod",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akodkod/varlock-sorbet.git"
+  },
   "files": [
-    "dist",
-    "README.md"
+    "dist/plugin.cjs",
+    "README.md",
+    "LICENSE"
   ],
   "type": "module",
   "exports": {
     "./plugin": "./dist/plugin.cjs"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
     "build": "vp pack",
@@ -16,6 +38,8 @@
     "typecheck": "tsc --noEmit",
     "check": "vp check",
     "format": "vp fmt",
+    "validate": "npm run typecheck && npm run check && npm test",
+    "prepublishOnly": "npm run validate",
     "prepack": "vp pack",
     "fixtures:update": "vp pack && varlock codegen --path test/fixtures/.env.schema"
   },

@@ -4,9 +4,15 @@ Generate Ruby Sorbet structs and nested enums from a Varlock environment schema.
 
 ## Setup
 
-Requires Varlock 1.23+, Node.js 22+ for package development, and Ruby with `sorbet-runtime` for the generated file.
+Requires Varlock 1.23+, Node.js 22+ when using the npm package, and Ruby with `sorbet-runtime` for the generated file.
 
-Install `varlock-sorbet` alongside Varlock in your JavaScript project's dependencies. For a Ruby-only project using the Varlock standalone binary, use an exact published version in `@plugin(varlock-sorbet@VERSION)` instead. This package has not yet been published; use the local plugin example below while developing.
+Install `varlock-sorbet` alongside Varlock in your JavaScript project's dependencies:
+
+```sh
+npm install varlock varlock-sorbet
+```
+
+For a Ruby-only project using the Varlock standalone binary, use an exact published version in `@plugin(varlock-sorbet@1.0.0)` instead. To try an unreleased version, use the local plugin example under Development.
 
 Add to your Gemfile:
 
@@ -159,3 +165,37 @@ After intentionally changing the schema or generator, refresh the generated fixt
 ```sh
 pnpm fixtures:update
 ```
+
+## Publishing
+
+Use Node.js 22+ and a Ruby installation with the dependencies from `Gemfile.lock`.
+Ensure that installation's `ruby`, `bundle`, and `srb` executables are on `PATH`.
+
+```sh
+pnpm install --frozen-lockfile
+bundle install
+pnpm validate
+npm pack
+tar -tzf varlock-sorbet-1.0.0.tgz
+```
+
+The tarball contains only `package.json`, `README.md`, `LICENSE`, and
+`dist/plugin.cjs`. The integration suite tests loading the packed package through
+Varlock from outside the source checkout. `npm pack` rebuilds the bundle using
+`prepack`.
+
+When ready to release, confirm the version in `package.json`, sign in to the
+intended npm account, and publish from the repository root:
+
+```sh
+npm login
+npm publish
+```
+
+`npm publish` runs type checks, formatting/lint checks, and all tests through
+`prepublishOnly`, then rebuilds the bundle. Publishing targets the public npm
+registry. Update the version and the versioned examples above for later releases.
+
+## License
+
+[MIT](LICENSE)
