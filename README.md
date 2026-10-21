@@ -4,23 +4,23 @@ Generate Ruby Sorbet structs and nested enums from a Varlock environment schema.
 
 ## Setup
 
-Requires Varlock 1.23+, Node.js 22+ when using the npm package, and Ruby with `sorbet-runtime` for the generated file.
+You need Varlock 1.23+ and Ruby with `sorbet-runtime` to use the generated file. The npm package also requires Node.js 22+.
 
-Install `varlock-sorbet` alongside Varlock in your JavaScript project's dependencies:
+Install `varlock-sorbet` and Varlock in your JavaScript project:
 
 ```sh
 npm install varlock varlock-sorbet
 ```
 
-For a Ruby-only project using the Varlock standalone binary, use an exact published version in `@plugin(varlock-sorbet@1.0.0)` instead. To try an unreleased version, use the local plugin example under Development.
+For a Ruby-only project with the Varlock standalone binary, pin the plugin to a published version with `@plugin(varlock-sorbet@1.0.0)`. To try an unreleased version, follow the local plugin example under Development.
 
-Add to your Gemfile:
+Add the runtime dependency to your Gemfile:
 
 ```ruby
 gem 'sorbet-runtime'
 ```
 
-Add to `.env.schema`:
+Configure the plugin in `.env.schema`:
 
 ```dotenv
 # @plugin(varlock-sorbet)
@@ -36,7 +36,7 @@ ENABLE_SMS_DELIVERY=false
 SENTRY_DSN=
 ```
 
-Run `varlock codegen`, or let `varlock load` / `varlock run` generate the file automatically. Varlock requires an explicit `path`, resolved relative to the file declaring the generator.
+Run `varlock codegen`, or let `varlock load` / `varlock run` generate the file automatically. You must set `path`; Varlock resolves it relative to the file that declares the generator.
 
 ```ruby
 require_relative "env_schema"
@@ -61,7 +61,7 @@ Env = T.let(result.payload, EnvSchema)
 Env.real_env == EnvSchema::RealEnv::Local
 ```
 
-The generated file only defines the struct and its nested enums. It does not read environment variables, deserialize values, or create an `Env` constant. Your application supplies typed values and decides how to load configuration. `sorbet-schema` is optional if your application chooses to use it for deserialization.
+The generated file defines the struct and its nested enums. Your application must load configuration and supply typed values: the file does not read environment variables, deserialize values, or create an `Env` constant. You can use `sorbet-schema` for deserialization, but it is optional.
 
 ## Options
 
@@ -77,7 +77,7 @@ The generated file only defines the struct and its nested enums. It does not rea
 # @generateSorbetEnv(path=lib/settings.rb, structName=SettingsSchema, prefixesToRemove=[PUBLIC_, APP_])
 ```
 
-A quoted comma-separated string is also accepted: `prefixesToRemove="PUBLIC_,APP_"`. Use `prefixesToRemove=[]` to disable stripping. Matching is case-insensitive and removes only one leading prefix, longest first. Environment keys use underscore-separated names, which are lowercased for Ruby properties. Colliding generated property names fail generation.
+You can also pass a quoted comma-separated string: `prefixesToRemove="PUBLIC_,APP_"`. Use `prefixesToRemove=[]` to keep all prefixes. The generator matches prefixes without regard to case and removes only one leading prefix, checking the longest first. It lowercases underscore-separated environment keys for Ruby properties. If two keys produce the same property name, generation fails.
 
 Varlock's shared `auto`, `executeWhenImported`, and `filter` options pass through unchanged:
 
@@ -85,7 +85,7 @@ Varlock's shared `auto`, `executeWhenImported`, and `filter` options pass throug
 # @generateSorbetEnv(path=lib/env_schema.rb, auto=false, filter="#api")
 ```
 
-With `auto=false`, explicitly run `varlock codegen`. Imported generators run only when `executeWhenImported=true`. See [Varlock code generation](https://varlock.dev/guides/code-generation/).
+With `auto=false`, run `varlock codegen` yourself. Imported generators run only when `executeWhenImported=true`. See [Varlock code generation](https://varlock.dev/guides/code-generation/).
 
 ## Generated types
 
@@ -115,11 +115,11 @@ end
 | array                                        | `T::Array[element type]`        |
 | record                                       | `T::Hash[key type, value type]` |
 
-Optional fields wrap their type in `T.nilable`. Varlock defaults are not embedded in generated Ruby; the application must supply required values when constructing the struct. Set `@required=false` explicitly for optional variables if your schema uses Varlock's default required behavior.
+Optional fields wrap their type in `T.nilable`. The generated Ruby does not include Varlock defaults, so your application must supply required values when constructing the struct. Set `@required=false` explicitly for optional variables if your schema uses Varlock's default required behavior.
 
 Enum names add `Item`, `Value`, or `Key` for collection elements. Enum members preserve their serialized values, and unspecified record values use `T.untyped`.
 
-Invalid or colliding properties, enum names, and member names fail generation. Keys excluded by Varlock (such as internal variables) are not generated. Field descriptions, documentation links, and deprecation notes become Ruby comments. Resolved environment values are never written into the generated source.
+Generation fails if properties, enum names, or member names are invalid or collide. The generator skips keys that Varlock excludes, such as internal variables. It includes field descriptions, documentation links, and deprecation notes as Ruby comments, but never writes resolved environment values into the source.
 
 ## Existing app enums
 
@@ -130,9 +130,9 @@ Use `@sorbetType` on an enum field to reuse an existing Ruby `T::Enum`:
 PUBLIC_REAL_ENV=local
 ```
 
-The generator emits `const :real_env, App::RealEnv` and does not generate a nested enum for that field. The class name is used exactly as supplied, without adding `::`. Optional fields become `T.nilable(App::RealEnv)`.
+The generator emits `const :real_env, App::RealEnv` and does not generate a nested enum for that field. It uses the class name exactly as supplied, without adding `::`. Optional fields become `T.nilable(App::RealEnv)`.
 
-Load the existing enum before the generated file, or make it available through your app's autoloader. Its serialized values must match the schema's enum values. `@sorbetType` accepts a static Ruby constant path and currently applies only to direct enum fields, not arrays or records. Generation does not load Ruby classes or verify their members.
+Load the existing enum before the generated file, or make it available through your app's autoloader. Its serialized values must match the schema's enum values. `@sorbetType` accepts a static Ruby constant path and currently applies only to direct enum fields, not arrays or records. The generator does not load Ruby classes or verify their members.
 
 ## Development
 
@@ -147,7 +147,7 @@ pnpm typecheck
 pnpm check
 ```
 
-Ensure `ruby` and `srb` are on `PATH`; tests also accept `RUBY` and `SRB` executable overrides. The Ruby runtime and static-check tests are required and do not silently skip when tools are missing. `pnpm format` applies the configured single quotes and no semicolons to TypeScript.
+Make sure `ruby` and `srb` are on `PATH`, or set the `RUBY` and `SRB` executable overrides. The Ruby runtime and static-check tests are required; they fail if the tools are missing. `pnpm format` applies the configured single quotes and no semicolons to TypeScript.
 
 `pnpm build` produces a single `dist/plugin.cjs` bundle. Varlock supplies the external `varlock/plugin-lib` module. To try it locally:
 
@@ -156,11 +156,11 @@ pnpm exec varlock codegen --path examples/.env.schema
 ruby -r ./examples/env_schema.rb -e 'puts EnvSchema::RealEnv::Local.serialize'
 ```
 
-Tests cover generated-file snapshots, Ruby execution, Sorbet static checking, and actual Varlock CLI loading, filtering, prefix syntax, custom paths, and automatic/explicit generation.
+Tests check generated-file snapshots, Ruby execution, and Sorbet static checking. They also exercise the Varlock CLI to test plugin loading, filtering, prefix syntax, custom paths, and both automatic and explicit generation.
 
-The integration fixture lives in `test/fixtures/.env.schema`, alongside its generated `env_schema.rb`. Tests copy the schema to a temporary directory, generate Ruby through the built plugin, compare the entire output with the checked-in file, and load it in Ruby to construct every supported type explicitly. Normal test runs do not rewrite either fixture.
+The integration fixture is in `test/fixtures/.env.schema`, alongside its generated `env_schema.rb`. Tests copy the schema to a temporary directory and generate Ruby through the built plugin. They compare the entire output with the checked-in file, then load it in Ruby and construct every supported type explicitly. Normal test runs leave both fixtures unchanged.
 
-After intentionally changing the schema or generator, refresh the generated fixture with:
+After changing the schema or generator, refresh the generated fixture with:
 
 ```sh
 pnpm fixtures:update
@@ -169,7 +169,7 @@ pnpm fixtures:update
 ## Publishing
 
 Use Node.js 22+ and a Ruby installation with the dependencies from `Gemfile.lock`.
-Ensure that installation's `ruby`, `bundle`, and `srb` executables are on `PATH`.
+Make sure that installation's `ruby`, `bundle`, and `srb` executables are on `PATH`.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -184,7 +184,7 @@ The tarball contains only `package.json`, `README.md`, `LICENSE`, and
 Varlock from outside the source checkout. `npm pack` rebuilds the bundle using
 `prepack`.
 
-When ready to release, confirm the version in `package.json`, sign in to the
+To release, check the version in `package.json`, sign in to the
 intended npm account, and publish from the repository root:
 
 ```sh
@@ -193,7 +193,7 @@ npm publish
 ```
 
 `npm publish` runs type checks, formatting/lint checks, and all tests through
-`prepublishOnly`, then rebuilds the bundle. Publishing targets the public npm
+`prepublishOnly`, then rebuilds the bundle. The package is published to the public npm
 registry. Update the version and the versioned examples above for later releases.
 
 ## License

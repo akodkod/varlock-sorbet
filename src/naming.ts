@@ -74,7 +74,7 @@ export function propertyName(key: string, prefixes: string[]): string {
   return name
 }
 
-// JSON escaping plus Ruby interpolation escaping makes arbitrary schema strings safe.
+// Escape JSON strings and Ruby interpolation so schema strings are safe to emit.
 export function rubyLiteral(value: string | number | boolean): string {
   if (typeof value === 'number' && !Number.isFinite(value))
     throw new Error('Enum numbers must be finite')

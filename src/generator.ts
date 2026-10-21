@@ -118,7 +118,7 @@ export function generateSorbetEnv(
     ]
       .filter(Boolean)
       .flatMap((s) => s!.split(/\r\n|\r|\n/))
-      // Schema comments may contain control characters; strip them before emitting Ruby.
+      // Strip control characters from schema comments before writing them to Ruby.
       // eslint-disable-next-line no-control-regex
       .map((s) => `  # ${s.replace(/[\x00-\x1f\x7f]/g, ' ')}`)
     return [
