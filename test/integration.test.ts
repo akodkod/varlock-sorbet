@@ -24,7 +24,7 @@ const baseSchema = fixtureSchema
   .filter((line) => !/^# @(plugin|generateSorbetEnv)\(/.test(line))
   .join('\n')
 
-function setup(options = 'path=lib/env.rb', schema = baseSchema) {
+function setup(options = 'path=lib/env_schema.rb', schema = baseSchema) {
   writeFileSync(
     path.join(dir, '.env.schema'),
     `# @plugin(./plugin.cjs)\n# @generateSorbetEnv(${options})\n\n${schema}`,
@@ -52,9 +52,9 @@ test('real schema regenerates the Ruby fixture and defines all supported types',
   copyFileSync(path.join(root, 'dist/plugin.cjs'), path.join(dir, 'dist/plugin.cjs'))
   copyFileSync(path.join(fixtureDir, '.env.schema'), path.join(isolatedFixture, '.env.schema'))
   run('codegen', '--path', isolatedFixture)
-  const generated = path.join(isolatedFixture, 'env.rb')
+  const generated = path.join(isolatedFixture, 'env_schema.rb')
   expect(readFileSync(generated, 'utf8')).toBe(
-    readFileSync(path.join(fixtureDir, 'env.rb'), 'utf8'),
+    readFileSync(path.join(fixtureDir, 'env_schema.rb'), 'utf8'),
   )
   execFileSync(ruby, ['-r', generated, path.join(fixtureDir, 'assert.rb')])
   execFileSync(process.env.SRB ?? 'srb', ['tc', '--no-config', generated])
@@ -182,7 +182,7 @@ test.each(['.env.production', '.env'])(
     writeFileSync(
       path.join(isolated, '.env.schema'),
       `# @plugin(../plugin.cjs)
-# @generateSorbetEnv(path=env.rb)
+# @generateSorbetEnv(path=env_schema.rb)
 # @currentEnv=$SORBET_TEST_ENV
 
 # @public
@@ -205,7 +205,7 @@ OTHER_ENV=local
         },
       })
       expect(result.status, result.stdout + result.stderr).toBe(0)
-      return readFileSync(path.join(isolated, 'env.rb'), 'utf8')
+      return readFileSync(path.join(isolated, 'env_schema.rb'), 'utf8')
     }
     const baseline = generate('development')
     expect(baseline).toContain('const :real_env, App::RealEnv')

@@ -18,7 +18,7 @@ Add to `.env.schema`:
 
 ```dotenv
 # @plugin(varlock-sorbet)
-# @generateSorbetEnv(path=lib/env.rb)
+# @generateSorbetEnv(path=lib/env_schema.rb)
 
 # @tag(api, app, hq, cli) @required @type=enum(local, staging, demo, production)
 PUBLIC_REAL_ENV=local
@@ -33,15 +33,26 @@ SENTRY_DSN=
 Run `varlock codegen`, or let `varlock load` / `varlock run` generate the file automatically. Varlock requires an explicit `path`, resolved relative to the file declaring the generator.
 
 ```ruby
-require_relative 'lib/env'
+require_relative "env_schema"
 
-settings = EnvSchema.new(
-  real_env: EnvSchema::RealEnv::Local,
-  enable_sms_delivery: false,
-  sentry_dsn: nil,
-)
+env_values = T.let(Varlock.load!, T::Hash[String, T.untyped])
 
-settings.real_env == EnvSchema::RealEnv::Local
+env_values = env_values.transform_keys do |key|
+  key
+    .downcase
+    .delete_prefix("public_")
+    .delete_prefix("vite_")
+    .delete_prefix("nuxt_public_")
+    .delete_prefix("next_public_")
+    .delete_prefix("react_app_")
+end
+
+result = EnvSchema.deserialize_from(:hash, env_values)
+raise "Failed to deserialize environment variables: #{result.error}" unless result.success?
+
+Env = T.let(result.payload, EnvSchema)
+
+Env.real_env == EnvSchema::RealEnv::Local
 ```
 
 The generated file only defines the struct and its nested enums. It does not read environment variables, deserialize values, or create an `Env` constant. Your application supplies typed values and decides how to load configuration. `sorbet-schema` is optional if your application chooses to use it for deserialization.
@@ -50,7 +61,7 @@ The generated file only defines the struct and its nested enums. It does not rea
 
 | Option             | Default                                                    | Meaning                                    |
 | ------------------ | ---------------------------------------------------------- | ------------------------------------------ |
-| `path`             | Required; use `lib/env.rb`                                 | Output file, managed by Varlock            |
+| `path`             | Required; use `lib/env_schema.rb`                          | Output file, managed by Varlock            |
 | `structName`       | `EnvSchema`                                                | Ruby struct class                          |
 | `prefixesToRemove` | `[PUBLIC_, VITE_, NUXT_PUBLIC_, NEXT_PUBLIC_, REACT_APP_]` | Prefixes stripped from Ruby property names |
 
@@ -65,7 +76,7 @@ A quoted comma-separated string is also accepted: `prefixesToRemove="PUBLIC_,APP
 Varlock's shared `auto`, `executeWhenImported`, and `filter` options pass through unchanged:
 
 ```dotenv
-# @generateSorbetEnv(path=lib/env.rb, auto=false, filter="#api")
+# @generateSorbetEnv(path=lib/env_schema.rb, auto=false, filter="#api")
 ```
 
 With `auto=false`, explicitly run `varlock codegen`. Imported generators run only when `executeWhenImported=true`. See [Varlock code generation](https://varlock.dev/guides/code-generation/).
@@ -136,12 +147,12 @@ Ensure `ruby` and `srb` are on `PATH`; tests also accept `RUBY` and `SRB` execut
 
 ```sh
 pnpm exec varlock codegen --path examples/.env.schema
-ruby -r ./examples/env.rb -e 'puts EnvSchema::RealEnv::Local.serialize'
+ruby -r ./examples/env_schema.rb -e 'puts EnvSchema::RealEnv::Local.serialize'
 ```
 
 Tests cover generated-file snapshots, Ruby execution, Sorbet static checking, and actual Varlock CLI loading, filtering, prefix syntax, custom paths, and automatic/explicit generation.
 
-The integration fixture lives in `test/fixtures/.env.schema`, alongside its generated `env.rb`. Tests copy the schema to a temporary directory, generate Ruby through the built plugin, compare the entire output with the checked-in file, and load it in Ruby to construct every supported type explicitly. Normal test runs do not rewrite either fixture.
+The integration fixture lives in `test/fixtures/.env.schema`, alongside its generated `env_schema.rb`. Tests copy the schema to a temporary directory, generate Ruby through the built plugin, compare the entire output with the checked-in file, and load it in Ruby to construct every supported type explicitly. Normal test runs do not rewrite either fixture.
 
 After intentionally changing the schema or generator, refresh the generated fixture with:
 

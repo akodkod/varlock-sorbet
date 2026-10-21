@@ -10,7 +10,7 @@ const dir = mkdtempSync(path.join(tmpdir(), 'varlock-sorbet-ruby-'))
 const ruby = process.env.RUBY ?? 'ruby'
 const srb = process.env.SRB ?? 'srb'
 afterAll(() => rmSync(dir, { recursive: true, force: true }))
-const generated = path.join(dir, 'env.rb')
+const generated = path.join(dir, 'env_schema.rb')
 test('rejects inherited Ruby method names before emitting a struct', () => {
   const names = execFileSync(
     ruby,
