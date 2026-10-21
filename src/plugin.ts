@@ -16,7 +16,11 @@ plugin.registerCodeGenerator({
   generate: async ({ graph, fields, options }) => {
     const sorbetFields = await Promise.all(
       fields.map(async (field) => {
-        const decorator = graph.configSchema[field.key].getDec('sorbetType')
+        // Match Varlock's field type resolution: ignore environment/value overrides
+        // and use the first decorator in schema definition precedence order.
+        const decorator = graph.configSchema[field.key].defsForTypeGeneration
+          .flatMap(({ itemDef }) => itemDef.decorators ?? [])
+          .find((decorator) => decorator.name === 'sorbetType')
         return {
           ...field,
           sorbetType: decorator ? validateSorbetType(await decorator.resolve()) : undefined,

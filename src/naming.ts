@@ -14,6 +14,7 @@ export function pascalCase(value: string): string {
     .join('')
 }
 
+// Include Object's public/protected methods: Sorbet rejects these as prop names.
 const reservedProperties = new Set([
   'class',
   'object_id',
@@ -26,6 +27,13 @@ const reservedProperties = new Set([
   'deserialize',
   'to_hash',
   'to_h',
+  'to_s',
+  'to_enum',
+  'enum_for',
+  'display',
+  'extend',
+  'tap',
+  'yield_self',
   'inspect',
   'pretty_inspect',
   'hash',
@@ -36,11 +44,21 @@ const reservedProperties = new Set([
   'clone',
   'method',
   'methods',
+  'public_method',
+  'public_methods',
+  'private_methods',
+  'protected_methods',
   'respond_to',
   'instance_eval',
   'instance_exec',
   'instance_variables',
+  'instance_variable_get',
+  'instance_variable_set',
+  'remove_instance_variable',
   'singleton_class',
+  'singleton_method',
+  'singleton_methods',
+  'define_singleton_method',
   'nil',
   'then',
   'itself',

@@ -11,6 +11,34 @@ const ruby = process.env.RUBY ?? 'ruby'
 const srb = process.env.SRB ?? 'srb'
 afterAll(() => rmSync(dir, { recursive: true, force: true }))
 const generated = path.join(dir, 'env.rb')
+test('rejects inherited Ruby method names before emitting a struct', () => {
+  const names = execFileSync(
+    ruby,
+    [
+      '-rsorbet-runtime',
+      '-e',
+      `Object.instance_methods.map(&:to_s).sort.each do |name|
+  next unless name.match?(/\\A[a-z_][a-z0-9_]*\\z/)
+  begin
+    Class.new(T::Struct).const(name.to_sym, String)
+  rescue ArgumentError => error
+    raise unless error.message.include?("can't be used as a prop")
+    puts name
+  end
+end`,
+    ],
+    { encoding: 'utf8' },
+  )
+    .trim()
+    .split('\n')
+  expect(names).toEqual(expect.arrayContaining(['display', 'to_s', 'instance_variable_get']))
+  for (const name of names) {
+    for (const key of [name.toUpperCase(), `PUBLIC_${name.toUpperCase()}`]) {
+      expect(() => generateSorbetEnv([field(key)]), key).toThrow(/reserved Ruby property/)
+    }
+  }
+})
+
 writeFileSync(
   generated,
   generateSorbetEnv([example, field('PORT', 'int'), field('OPTIONAL', 'string', false)]),

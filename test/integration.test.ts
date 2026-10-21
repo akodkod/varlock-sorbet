@@ -174,3 +174,51 @@ PUBLIC_REAL_ENV=local
   expect(result.status).not.toBe(0)
   expect(result.stdout + result.stderr).toContain('@sorbetType')
 })
+
+test.each(['.env.production', '.env'])(
+  'ignores sorbetType overrides from %s during code generation',
+  (overrideFile) => {
+    const isolated = mkdtempSync(path.join(dir, 'stable-types-'))
+    writeFileSync(
+      path.join(isolated, '.env.schema'),
+      `# @plugin(../plugin.cjs)
+# @generateSorbetEnv(path=env.rb)
+# @currentEnv=$SORBET_TEST_ENV
+
+# @public
+SORBET_TEST_ENV=development
+# @type=enum(local, production) @sorbetType=App::RealEnv
+REAL_ENV=local
+# @type=enum(local, production)
+OTHER_ENV=local
+`,
+    )
+    const generate = (environment: string) => {
+      const result = spawnSync(process.execPath, [cli, 'codegen'], {
+        cwd: isolated,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          SORBET_TEST_ENV: environment,
+          VARLOCK_TELEMETRY_DISABLED: '1',
+          NO_COLOR: '1',
+        },
+      })
+      expect(result.status, result.stdout + result.stderr).toBe(0)
+      return readFileSync(path.join(isolated, 'env.rb'), 'utf8')
+    }
+    const baseline = generate('development')
+    expect(baseline).toContain('const :real_env, App::RealEnv')
+    expect(baseline).toContain('class OtherEnv < T::Enum')
+    writeFileSync(
+      path.join(isolated, overrideFile),
+      `# @sorbetType=App::ProductionEnv
+REAL_ENV=production
+# @sorbetType=App::OtherEnv
+OTHER_ENV=production
+`,
+    )
+    expect(generate('production')).toBe(baseline)
+    expect(generate('development')).toBe(baseline)
+  },
+)
